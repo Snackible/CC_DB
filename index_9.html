@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snackible — Customer Care</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">Snackible</span>
+      <span class="header-sub">Customer Care Dashboard</span>
+    </div>
+    <div class="header-right">
+      <span id="lastUpdated" class="last-updated"></span>
+      <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-label">Total cancellations</div>
+      <div class="kpi-value" id="kTotal">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Value lost</div>
+      <div class="kpi-value" id="kValue">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">COD orders</div>
+      <div class="kpi-value" id="kCod">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Prepaid orders</div>
+      <div class="kpi-value" id="kPre">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">GPay refunds</div>
+      <div class="kpi-value" id="kRefunds">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg refund</div>
+      <div class="kpi-value" id="kAvg">—</div>
+    </div>
+  </div>
+
+  <!-- PIE CHART — full viewport -->
+  <section class="pie-section">
+    <div class="pie-title">Cancellation reasons</div>
+    <div class="pie-container">
+      <canvas id="pieChart" aria-label="Cancellation reasons by count"></canvas>
+    </div>
+    <div class="legend" id="pieLegend"></div>
+  </section>
+
+  <!-- BOTTOM TABS -->
+  <section class="bottom-section">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(0, this)">Cancellations</button>
+      <button class="tab" onclick="switchTab(1, this)">GPay COD refunds</button>
+    </div>
+
+    <!-- Cancellations table -->
+    <div class="pane active" id="pane0">
+      <div class="table-toolbar">
+        <input type="text" id="search0" placeholder="Search order ID, reason, payment…" oninput="renderCancTable()" />
+        <span class="row-count" id="count0"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Order date</th>
+              <th>Cancel date</th>
+              <th>Reason</th>
+              <th>Value</th>
+              <th>Payment</th>
+            </tr>
+          </thead>
+          <tbody id="cancBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- GPay refunds table -->
+    <div class="pane" id="pane1">
+      <div class="table-toolbar">
+        <input type="text" id="search1" placeholder="Search name, remark, order ID…" oninput="renderRefTable()" />
+        <span class="row-count" id="count1"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Order ID</th>
+              <th>Amount</th>
+              <th>Type</th>
+              <th>CC remark</th>
+              <th>Date refunded</th>
+            </tr>
+          </thead>
+          <tbody id="refBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- error banner -->
+  <div class="error-banner" id="errorBanner" style="display:none">
+    ⚠ Could not load data. Make sure the Apps Script is deployed and <code>APPS_SCRIPT_URL</code> in script.js is updated.
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
