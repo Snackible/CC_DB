@@ -119,7 +119,7 @@ function renderRefTable() {
 }
 
 function updateKPIs() {
-  const totalVal  = cancData.filter(r => r.paymentMode.toLowerCase() === 'prepaid').reduce((s, r) => s + r.value, 0);
+  const totalVal  = refData.reduce((s, r) => s + r.amount, 0);
   const codCount  = cancData.filter(r => r.paymentMode.toLowerCase() === 'cod').length;
   const preCount  = cancData.length - codCount;
   const refTotal  = refData.reduce((s, r)  => s + r.amount, 0);
