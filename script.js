@@ -12,6 +12,13 @@ let pieInst  = null;
 let cancFilter = { from: '', to: '' };
 let refFilter  = { from: '', to: '' };
 
+function toYMD(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '';
+  return d.toISOString().slice(0, 10);
+}
+
 function normReason(r) {
   if (!r) return 'Miscellaneous';
   const s = r.trim().toLowerCase();
@@ -32,16 +39,18 @@ async function fetchSheet(sheet) {
 
 function getFilteredCanc() {
   return cancData.filter(r => {
-    if (cancFilter.from && r.cancelDate < cancFilter.from) return false;
-    if (cancFilter.to   && r.cancelDate > cancFilter.to)   return false;
+    const d = toYMD(r.cancelDate);
+    if (cancFilter.from && d < cancFilter.from) return false;
+    if (cancFilter.to   && d > cancFilter.to)   return false;
     return true;
   });
 }
 
 function getFilteredRef() {
   return refData.filter(r => {
-    if (refFilter.from && r.dateRefunded < refFilter.from) return false;
-    if (refFilter.to   && r.dateRefunded > refFilter.to)   return false;
+    const d = toYMD(r.dateRefunded);
+    if (refFilter.from && d < refFilter.from) return false;
+    if (refFilter.to   && d > refFilter.to)   return false;
     return true;
   });
 }
@@ -121,8 +130,9 @@ function renderCancTable() {
   const q    = document.getElementById('search0').value.toLowerCase();
   const rows = cancData.filter(r => {
     if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
-    if (cancFilter.from && r.cancelDate < cancFilter.from) return false;
-    if (cancFilter.to   && r.cancelDate > cancFilter.to)   return false;
+    const d = toYMD(r.cancelDate);
+    if (cancFilter.from && d < cancFilter.from) return false;
+    if (cancFilter.to   && d > cancFilter.to)   return false;
     return true;
   });
   document.getElementById('count0').textContent = `${rows.length} of ${cancData.length}`;
@@ -145,8 +155,9 @@ function renderRefTable() {
   const q    = document.getElementById('search1').value.toLowerCase();
   const rows = refData.filter(r => {
     if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
-    if (refFilter.from && r.dateRefunded < refFilter.from) return false;
-    if (refFilter.to   && r.dateRefunded > refFilter.to)   return false;
+    const d = toYMD(r.dateRefunded);
+    if (refFilter.from && d < refFilter.from) return false;
+    if (refFilter.to   && d > refFilter.to)   return false;
     return true;
   });
   document.getElementById('count1').textContent = `${rows.length} of ${refData.length}`;
