@@ -179,7 +179,7 @@ function renderRefTable() {
 function updateKPIs(fc, fr) {
   fc = fc || cancData;
   fr = fr || refData;
-  const totalVal = fr.reduce((s, r) => s + r.amount, 0);
+  const totalVal = fc.filter(r => r.paymentMode.toLowerCase() !== 'cod').reduce((s, r) => s + r.value, 0);
   const codCount = fc.filter(r => r.paymentMode.toLowerCase() === 'cod').length;
   const preCount = fc.length - codCount;
   const refTotal = fr.reduce((s, r) => s + r.amount, 0);
