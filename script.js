@@ -9,6 +9,8 @@ const COLORS = [
 let cancData = [];
 let refData  = [];
 let pieInst  = null;
+let cancFilter = { from: '', to: '' };
+let refFilter  = { from: '', to: '' };
 
 function normReason(r) {
   if (!r) return 'Miscellaneous';
@@ -28,16 +30,55 @@ async function fetchSheet(sheet) {
   return res.json();
 }
 
+function getFilteredCanc() {
+  return cancData.filter(r => {
+    if (cancFilter.from && r.cancelDate < cancFilter.from) return false;
+    if (cancFilter.to   && r.cancelDate > cancFilter.to)   return false;
+    return true;
+  });
+}
+
+function getFilteredRef() {
+  return refData.filter(r => {
+    if (refFilter.from && r.dateRefunded < refFilter.from) return false;
+    if (refFilter.to   && r.dateRefunded > refFilter.to)   return false;
+    return true;
+  });
+}
+
+function applyCustomise() {
+  cancFilter.from = document.getElementById('cancFrom').value;
+  cancFilter.to   = document.getElementById('cancTo').value;
+  refFilter.from  = document.getElementById('refFrom').value;
+  refFilter.to    = document.getElementById('refTo').value;
+  const fc = getFilteredCanc();
+  const fr = getFilteredRef();
+  updateKPIs(fc, fr);
+  buildPie(fc);
+  renderCancTable();
+  renderRefTable();
+}
+
+function resetCustomise() {
+  cancFilter = { from: '', to: '' };
+  refFilter  = { from: '', to: '' };
+  ['cancFrom','cancTo','refFrom','refTo'].forEach(id => document.getElementById(id).value = '');
+  updateKPIs(cancData, refData);
+  buildPie(cancData);
+  renderCancTable();
+  renderRefTable();
+}
+
 function buildPie(rows) {
   const counts = {};
   rows.forEach(r => {
     const key = normReason(r.reason);
     counts[key] = (counts[key] || 0) + 1;
   });
-  const sorted  = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const labels  = sorted.map(x => x[0]);
-  const data    = sorted.map(x => x[1]);
-  const total   = data.reduce((a, b) => a + b, 0);
+  const sorted   = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const labels   = sorted.map(x => x[0]);
+  const data     = sorted.map(x => x[1]);
+  const total    = data.reduce((a, b) => a + b, 0);
   const bgColors = labels.map((_, i) => COLORS[i % COLORS.length]);
 
   document.getElementById('pieLegend').innerHTML = labels.map((l, i) =>
@@ -78,9 +119,12 @@ function buildPie(rows) {
 
 function renderCancTable() {
   const q    = document.getElementById('search0').value.toLowerCase();
-  const rows = cancData.filter(r =>
-    !q || Object.values(r).join(' ').toLowerCase().includes(q)
-  );
+  const rows = cancData.filter(r => {
+    if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
+    if (cancFilter.from && r.cancelDate < cancFilter.from) return false;
+    if (cancFilter.to   && r.cancelDate > cancFilter.to)   return false;
+    return true;
+  });
   document.getElementById('count0').textContent = `${rows.length} of ${cancData.length}`;
   document.getElementById('cancBody').innerHTML = rows.slice(0, 300).map(r => {
     const badge = r.paymentMode.toLowerCase() === 'cod'
@@ -99,9 +143,12 @@ function renderCancTable() {
 
 function renderRefTable() {
   const q    = document.getElementById('search1').value.toLowerCase();
-  const rows = refData.filter(r =>
-    !q || Object.values(r).join(' ').toLowerCase().includes(q)
-  );
+  const rows = refData.filter(r => {
+    if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
+    if (refFilter.from && r.dateRefunded < refFilter.from) return false;
+    if (refFilter.to   && r.dateRefunded > refFilter.to)   return false;
+    return true;
+  });
   document.getElementById('count1').textContent = `${rows.length} of ${refData.length}`;
   document.getElementById('refBody').innerHTML = rows.slice(0, 300).map(r => {
     const badge = r.type.toLowerCase() === 'full'
@@ -118,15 +165,17 @@ function renderRefTable() {
   }).join('');
 }
 
-function updateKPIs() {
-  const totalVal  = refData.reduce((s, r) => s + r.amount, 0);
-  const codCount  = cancData.filter(r => r.paymentMode.toLowerCase() === 'cod').length;
-  const preCount  = cancData.length - codCount;
-  const refTotal  = refData.reduce((s, r)  => s + r.amount, 0);
-  const avgRef    = refData.length ? refTotal / refData.length : 0;
+function updateKPIs(fc, fr) {
+  fc = fc || cancData;
+  fr = fr || refData;
+  const totalVal = fr.reduce((s, r) => s + r.amount, 0);
+  const codCount = fc.filter(r => r.paymentMode.toLowerCase() === 'cod').length;
+  const preCount = fc.length - codCount;
+  const refTotal = fr.reduce((s, r) => s + r.amount, 0);
+  const avgRef   = fr.length ? refTotal / fr.length : 0;
   const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
 
-  document.getElementById('kTotal').textContent   = cancData.length;
+  document.getElementById('kTotal').textContent   = fc.length;
   document.getElementById('kValue').textContent   = fmt(totalVal);
   document.getElementById('kCod').textContent     = codCount;
   document.getElementById('kPre').textContent     = preCount;
@@ -150,7 +199,7 @@ async function loadAll() {
     ]);
     cancData = cancResp.rows || [];
     refData  = refResp.rows  || [];
-    updateKPIs();
+    updateKPIs(cancData, refData);
     buildPie(cancData);
     renderCancTable();
     renderRefTable();
