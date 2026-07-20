@@ -204,6 +204,80 @@ tr:hover td { background: var(--bg); }
 .b-full { background: #fee2e2; color: #991b1b; }
 .b-partial { background: #dcfce7; color: #166534; }
 
+/* ── CUSTOMISE PANE ── */
+.customise-pane {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+}
+.customise-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.customise-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.customise-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.customise-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+.customise-row input[type="date"] {
+  height: 32px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  cursor: pointer;
+}
+.customise-row input[type="date"]:focus { border-color: var(--accent); }
+.customise-actions {
+  display: flex;
+  gap: 10px;
+}
+.btn-apply {
+  padding: 6px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-apply:hover { opacity: 0.8; }
+.btn-reset {
+  padding: 6px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: none;
+  color: var(--muted);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.btn-reset:hover { color: var(--text); }
+
 /* ── ERROR ── */
 .error-banner {
   position: fixed;
