@@ -72,7 +72,7 @@ function resetCustomise() {
   cancFilter = { from: '', to: '' };
   refFilter  = { from: '', to: '' };
   ['cancFrom','cancTo','refFrom','refTo'].forEach(id => document.getElementById(id).value = '');
-  updateKPIs(cancData, refData);
+  updateKPIs();
   buildPie(cancData);
   renderCancTable();
   renderRefTable();
@@ -84,10 +84,10 @@ function buildPie(rows) {
     const key = normReason(r.reason);
     counts[key] = (counts[key] || 0) + 1;
   });
-  const sorted   = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const labels   = sorted.map(x => x[0]);
-  const data     = sorted.map(x => x[1]);
-  const total    = data.reduce((a, b) => a + b, 0);
+  const sorted  = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const labels  = sorted.map(x => x[0]);
+  const data    = sorted.map(x => x[1]);
+  const total   = data.reduce((a, b) => a + b, 0);
   const bgColors = labels.map((_, i) => COLORS[i % COLORS.length]);
 
   document.getElementById('pieLegend').innerHTML = labels.map((l, i) =>
@@ -177,13 +177,13 @@ function renderRefTable() {
 }
 
 function updateKPIs(fc, fr) {
-  fc = fc || cancData;
-  fr = fr || refData;
-  const totalVal = fc.filter(r => r.paymentMode.toLowerCase() !== 'cod').reduce((s, r) => s + r.value, 0);
-  const codCount = fc.filter(r => r.paymentMode.toLowerCase() === 'cod').length;
-  const preCount = fc.length - codCount;
-  const refTotal = fr.reduce((s, r) => s + r.amount, 0);
-  const avgRef   = fr.length ? refTotal / fr.length : 0;
+  fc = fc !== undefined ? fc : cancData;
+  fr = fr !== undefined ? fr : refData;
+  const totalVal  = fr.reduce((s, r) => s + r.amount, 0);
+  const codCount  = fc.filter(r => r.paymentMode.toLowerCase() === 'cod').length;
+  const preCount  = fc.length - codCount;
+  const refTotal  = fr.reduce((s, r) => s + r.amount, 0);
+  const avgRef    = fr.length ? refTotal / fr.length : 0;
   const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
 
   document.getElementById('kTotal').textContent   = fc.length;
@@ -210,7 +210,7 @@ async function loadAll() {
     ]);
     cancData = cancResp.rows || [];
     refData  = refResp.rows  || [];
-    updateKPIs(cancData, refData);
+    updateKPIs();
     buildPie(cancData);
     renderCancTable();
     renderRefTable();
