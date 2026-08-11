@@ -13,6 +13,7 @@ let cancFilter = { from: '', to: '' };
 let refFilter  = { from: '', to: '' };
 let refTypeFilter = 'all';
 let refRemarkFilter = '';
+const registeredSheets = []; // sheets added via registerSheetTab()
 
 function toYMD(dateStr) {
   if (!dateStr) return '';
@@ -33,8 +34,9 @@ function normReason(r) {
   return 'Miscellaneous';
 }
 
-async function fetchSheet(sheet) {
-  const res = await fetch(`${APPS_SCRIPT_URL}?sheet=${sheet}`);
+async function fetchSheet(sheet, baseUrl) {
+  const url = baseUrl || APPS_SCRIPT_URL;
+  const res = await fetch(`${url}?sheet=${sheet}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -68,6 +70,16 @@ function applyCustomise() {
   buildPie(fc);
   renderCancTable();
   renderRefTable();
+
+  registeredSheets.forEach(entry => {
+    if (entry.config.dateField) {
+      const f = document.getElementById(`from_${entry.config.id}`);
+      const t = document.getElementById(`to_${entry.config.id}`);
+      entry.dateFilter.from = f ? f.value : '';
+      entry.dateFilter.to   = t ? t.value : '';
+    }
+    renderGenericTable(entry.config.id);
+  });
 }
 
 function resetCustomise() {
@@ -85,6 +97,17 @@ function resetCustomise() {
     buildPie(cancData);
     renderCancTable();
     renderRefTable();
+
+    registeredSheets.forEach(entry => {
+      entry.dateFilter = { from: '', to: '' };
+      if (entry.config.dateField) {
+        const f = document.getElementById(`from_${entry.config.id}`);
+        const t = document.getElementById(`to_${entry.config.id}`);
+        if (f) f.value = '';
+        if (t) t.value = '';
+      }
+      renderGenericTable(entry.config.id);
+    });
 }
 
 function buildPie(rows) {
@@ -392,6 +415,264 @@ function switchTab(i, btn) {
   document.querySelectorAll('.pane').forEach((p, j) => p.classList.toggle('active', i === j));
 }
 
+// ────────────────────────────────────────────────────────────────
+// GENERIC SHEET TAB FRAMEWORK
+//
+// Cancellations / GPay COD refunds above are hand-written and left
+// untouched. Any sheet added after them can instead call
+// registerSheetTab({...}) once, and its tab, table, search box,
+// optional dropdown filters and optional date-range filter (in the
+// Customise pane) are all generated automatically. Example:
+//
+// registerSheetTab({
+//   id: 'razorpay',                 // unique, used to build element ids
+//   apiSheet: 'razorpay',           // sheet= param sent to the Apps Script
+//   apiUrl: '',                     // optional: a different Apps Script Web App
+//                                    // URL, if this sheet lives in a separate
+//                                    // deployment. Leave unset to reuse
+//                                    // APPS_SCRIPT_URL above.
+//   label: 'Razorpay refunds',      // tab button text
+//   searchPlaceholder: 'Search order ID, remark…',
+//   dateField: 'dateRefunded',      // optional: adds a Customise date-range filter
+//   selectFilters: [                // optional: one dropdown per field
+//     { field: 'status', label: 'status' }
+//   ],
+//   columns: [                      // OPTIONAL — omit to auto-detect columns
+//     { key: 'orderId', label: 'Order ID' },       // from the keys of the first
+//     { key: 'amount',  label: 'Amount', format: 'currency' }, // row the API returns
+//     { key: 'status',  label: 'Status', badge: {
+//         success: { label: 'Success', bg: '#dcfce7', color: '#166534' },
+//         failed:  { label: 'Failed',  bg: '#fee2e2', color: '#991b1b' }
+//       } },
+//     { key: 'dateRefunded', label: 'Date' }
+//   ]
+// });
+//
+// If `columns` is omitted, headers are auto-generated from field names
+// (e.g. "orderId" → "Order ID"), and cells render as plain text — no
+// currency formatting or badge colors. Add an explicit columns list any
+// time you want those.
+//
+// Note: the sheet name passed as apiSheet must also be handled by the
+// Apps Script backend's doGet (the ?sheet= param), same as 'cancellations'
+// and 'gpay' are today — this framework only covers the front end.
+// ────────────────────────────────────────────────────────────────
+
+function registerSheetTab(config) {
+  const entry = {
+    config,
+    data: [],
+    dateFilter: { from: '', to: '' },
+    columns: (config.columns && config.columns.length) ? config.columns : null
+  };
+  registeredSheets.push(entry);
+  buildSheetTabDOM(config);
+  return entry;
+}
+
+// Turns an API field name like "orderId" or "cc_remark" into "Order ID" / "Cc Remark".
+function humanizeKey(key) {
+  const acronyms = { id: 'ID', cc: 'CC', url: 'URL', sku: 'SKU' };
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  return words
+    .map(w => acronyms[w.toLowerCase()] || (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+    .join(' ');
+}
+
+// Used when a sheet is registered without a `columns` list — builds one from
+// the keys of the first row returned by the API.
+function deriveColumns(data) {
+  if (!data.length) return [];
+  return Object.keys(data[0]).map(key => ({ key, label: humanizeKey(key) }));
+}
+
+function renderTableHead(id, columns) {
+  const headRow = document.getElementById(`head_${id}`);
+  if (!headRow) return;
+  headRow.innerHTML = columns.map(col => `<th>${col.label}</th>`).join('');
+}
+
+function buildSheetTabDOM(config) {
+  const tabsEl    = document.querySelector('.tabs');
+  const sectionEl = document.querySelector('.bottom-section');
+  const idx       = document.querySelectorAll('.tab').length;
+
+  const tabBtn = document.createElement('button');
+  tabBtn.className = 'tab';
+  tabBtn.textContent = config.label;
+  tabBtn.onclick = () => switchTab(idx, tabBtn);
+  tabsEl.appendChild(tabBtn);
+
+  const pane = document.createElement('div');
+  pane.className = 'pane';
+  pane.id = `pane_${config.id}`;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'table-toolbar';
+
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.id = `search_${config.id}`;
+  search.placeholder = config.searchPlaceholder || 'Search…';
+  search.oninput = () => renderGenericTable(config.id);
+  toolbar.appendChild(search);
+
+  (config.selectFilters || []).forEach(sf => {
+    const sel = document.createElement('select');
+    sel.id = `select_${config.id}_${sf.field}`;
+    sel.innerHTML = `<option value="">All ${sf.label}</option>`;
+    sel.onchange = () => renderGenericTable(config.id);
+    toolbar.appendChild(sel);
+  });
+
+  const count = document.createElement('span');
+  count.className = 'row-count';
+  count.id = `count_${config.id}`;
+  toolbar.appendChild(count);
+
+  pane.appendChild(toolbar);
+
+  const scroll = document.createElement('div');
+  scroll.className = 'tbl-scroll';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  headRow.id = `head_${config.id}`;
+  if (config.columns && config.columns.length) {
+    config.columns.forEach(col => {
+      const th = document.createElement('th');
+      th.textContent = col.label;
+      headRow.appendChild(th);
+    });
+  }
+  thead.appendChild(headRow);
+  const tbody = document.createElement('tbody');
+  tbody.id = `body_${config.id}`;
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  pane.appendChild(scroll);
+
+  sectionEl.appendChild(pane);
+
+  if (config.dateField) {
+    const customisePane = document.querySelector('.customise-pane');
+    const group = document.createElement('div');
+    group.className = 'customise-group';
+    group.innerHTML = `
+      <div class="customise-label">${config.label} — filter by date</div>
+      <div class="customise-row">
+        <label>From <input type="date" id="from_${config.id}" /></label>
+        <label>To <input type="date" id="to_${config.id}" /></label>
+      </div>`;
+    customisePane.insertBefore(group, customisePane.querySelector('.customise-actions'));
+  }
+}
+
+function fmtCell(row, col) {
+  const value = row[col.key];
+  if (col.badge) {
+    const key = (value ?? '').toString().trim().toLowerCase();
+    const b = col.badge[key] || col.badge.default;
+    if (!b) return value ?? '—';
+    return `<span class="badge" style="background:${b.bg};color:${b.color}">${b.label}</span>`;
+  }
+  if (col.format === 'currency') {
+    return '₹' + Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  }
+  return (value === undefined || value === null || value === '') ? '—' : value;
+}
+
+function populateGenericSelectFilters(entry) {
+  const { config, data } = entry;
+  (config.selectFilters || []).forEach(sf => {
+    const sel = document.getElementById(`select_${config.id}_${sf.field}`);
+    if (!sel) return;
+    const current = sel.value;
+    const values = [...new Set(
+      data.map(r => (r[sf.field] ?? '').toString().trim()).filter(Boolean)
+    )].sort();
+    sel.innerHTML = `<option value="">All ${sf.label}</option>` +
+      values.map(v => `<option value="${v}">${v}</option>`).join('');
+    if (values.includes(current)) sel.value = current;
+  });
+}
+
+function renderGenericTable(id) {
+  const entry = registeredSheets.find(e => e.config.id === id);
+  if (!entry) return;
+  const { config, data, dateFilter, columns } = entry;
+  if (!columns) return; // header/columns not derived yet — nothing to render
+
+  const searchEl = document.getElementById(`search_${id}`);
+  const q = searchEl ? searchEl.value.toLowerCase() : '';
+
+  const rows = data.filter(r => {
+    if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
+
+    for (const sf of (config.selectFilters || [])) {
+      const sel = document.getElementById(`select_${id}_${sf.field}`);
+      const want = sel ? sel.value : '';
+      if (want && (r[sf.field] ?? '').toString().trim().toLowerCase() !== want.toLowerCase()) return false;
+    }
+
+    if (config.dateField) {
+      const d = toYMD(r[config.dateField]);
+      if (dateFilter.from && d < dateFilter.from) return false;
+      if (dateFilter.to   && d > dateFilter.to)   return false;
+    }
+
+    return true;
+  });
+
+  const countEl = document.getElementById(`count_${id}`);
+  if (countEl) countEl.textContent = `${rows.length} of ${data.length}`;
+
+  const bodyEl = document.getElementById(`body_${id}`);
+  if (bodyEl) {
+    bodyEl.innerHTML = rows.slice(0, 300).map(r =>
+      `<tr>${columns.map(col => `<td>${fmtCell(r, col)}</td>`).join('')}</tr>`
+    ).join('');
+  }
+}
+
+async function loadGenericSheets() {
+  await Promise.all(registeredSheets.map(async entry => {
+    try {
+      const resp = await fetchSheet(entry.config.apiSheet, entry.config.apiUrl);
+      entry.data = resp.rows || [];
+      if (!entry.columns) {
+        entry.columns = deriveColumns(entry.data);
+        renderTableHead(entry.config.id, entry.columns);
+      }
+      populateGenericSelectFilters(entry);
+      renderGenericTable(entry.config.id);
+    } catch (err) {
+      console.error(`Failed to load sheet "${entry.config.id}":`, err);
+    }
+  }));
+}
+
+
+
+const NEW_SHEET_LINK = 'https://script.google.com/macros/s/AKfycbwx_OqG7XEt7VrkD_ianlh5Dbl4LASFIfKVKmii6Hlt6Foo2n44jDUoPP-dEPkqYN8/exec'; // paste the Apps Script Web App URL here if this
+                            
+
+registerSheetTab({
+  id: 'Delhivery',                       // TODO: unique short id
+  apiSheet: '',                         // TODO: sheet= value the Apps Script doGet expects
+  apiUrl: NEW_SHEET_LINK || undefined,
+  label: 'Delhivery',                   // TODO: tab button text
+  searchPlaceholder: 'Search…',
+  dateField: '',                        // TODO: field name for Customise date filter, or delete this line
+  selectFilters: []                     // TODO: e.g. [{ field: 'status', label: 'status' }]
+});
+
 async function loadAll() {
   document.getElementById('errorBanner').style.display = 'none';
   document.querySelectorAll('.kpi-value').forEach(el => el.classList.add('loading'));
@@ -407,6 +688,7 @@ async function loadAll() {
     buildPie(cancData);
     renderCancTable();
     renderRefTable();
+    await loadGenericSheets();
     document.getElementById('lastUpdated').textContent =
       'Updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
