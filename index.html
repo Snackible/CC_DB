@@ -91,6 +91,44 @@
     <div class="pane" id="pane1">
       <div class="table-toolbar">
         <input type="text" id="search1" placeholder="Search name, remark, order ID…" oninput="renderRefTable()" />
+ <div class="refund-filters">
+
+    <select id="remarkFilter" onchange="renderRefTable()">
+        <option value="all">All remarks</option>
+    </select>
+
+    <div class="refund-filter" id="refundFilter">
+
+        <button class="refund-filter-btn" type="button">
+            <span class="filter-label">All types</span>
+            <span class="filter-arrow">▼</span>
+        </button>
+
+        <div class="refund-filter-menu">
+
+            <button type="button"
+                    class="filter-option"
+                    data-value="all">
+                All types
+            </button>
+
+            <button type="button"
+                    class="filter-option option-full"
+                    data-value="full">
+                Full refund
+            </button>
+
+            <button type="button"
+                    class="filter-option option-partial"
+                    data-value="partial">
+                Partial refund
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
         <span class="row-count" id="count1"></span>
       </div>
       <div class="tbl-scroll">

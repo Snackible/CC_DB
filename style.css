@@ -142,12 +142,14 @@ body {
 .pane.active { display: flex; }
 
 .table-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 1rem;
-  border-bottom: 0.5px solid var(--border);
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    row-gap: 8px;
+    padding: 8px 1rem;
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
 }
 .table-toolbar input {
   flex: 1;
@@ -161,6 +163,19 @@ body {
   outline: none;
 }
 .table-toolbar input:focus { border-color: var(--accent); }
+.table-toolbar select {
+  flex: none;
+  height: 32px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  cursor: pointer;
+}
+.table-toolbar select:focus { border-color: var(--accent); }
 .row-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
 .tbl-scroll { overflow: auto; flex: 1; }
@@ -202,7 +217,7 @@ tr:hover td { background: var(--bg); }
 .b-cod { background: #fef3c7; color: #92400e; }
 .b-pre { background: #dbeafe; color: #1e40af; }
 .b-full { background: #fee2e2; color: #991b1b; }
-.b-partial { background: #dcfce7; color: #166534; }
+.b-partial { background: #f7f978; color: #ffa705; }
 
 /* ── CUSTOMISE PANE ── */
 .customise-pane {
@@ -293,6 +308,132 @@ tr:hover td { background: var(--bg); }
   text-align: center;
 }
 
+.refund-filters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.remark-filter {
+    cursor: pointer;
+}
+
+.remark-filter:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+#remarkFilter {
+    height: 26px;
+    width: 210px;
+    padding: 0 8px;
+    font-size: 11px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+}
+
+#typeFilter1 {
+  transition: background-color 0.15s, color 0.15s;
+}
+
+#typeFilter1.full { background: #fee2e2; color: #991b1b; }
+
+#typeFilter1.partial { background: #f7f978; color: #ffa705; }
+
+.refund-filter {
+    position: relative;
+    flex: none;
+}
+
+.refund-filter-btn {
+    height: 26px;
+    min-width: 130px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg);
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.refund-filter-btn:hover {
+    border-color: var(--accent);
+}
+
+.filter-arrow {
+    font-size: 9px;
+    color: var(--muted);
+}
+
+.refund-filter-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 150px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    z-index: 200;
+}
+
+.refund-filter.open .refund-filter-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.filter-option {
+    width: 100%;
+    border: none;
+    border-radius: 4px;
+    padding: 7px 9px;
+    text-align: left;
+    font-size: 12px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.filter-option:hover {
+    background: var(--bg);
+}
+
+.filter-option.option-full {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.filter-option.option-partial{ background: #f7f978; color: #ffa705; }
+
+.filter-option.option-full:hover {
+    background: #fecaca;
+}
+
+.filter-option.option-partial:hover {
+    background: #bbf7d0;
+}
+
+/* Clickable refund badges */
+.refund-badge {
+    cursor: pointer;
+}
+
+.refund-badge:hover {
+    opacity: 0.75;
+}
+
 /* ── LOADING STATE ── */
 .kpi-value.loading { opacity: 0.3; animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+

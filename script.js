@@ -11,6 +11,8 @@ let refData  = [];
 let pieInst  = null;
 let cancFilter = { from: '', to: '' };
 let refFilter  = { from: '', to: '' };
+let refTypeFilter = 'all';
+let refRemarkFilter = '';
 
 function toYMD(dateStr) {
   if (!dateStr) return '';
@@ -69,13 +71,20 @@ function applyCustomise() {
 }
 
 function resetCustomise() {
-  cancFilter = { from: '', to: '' };
-  refFilter  = { from: '', to: '' };
-  ['cancFrom','cancTo','refFrom','refTo'].forEach(id => document.getElementById(id).value = '');
-  updateKPIs();
-  buildPie(cancData);
-  renderCancTable();
-  renderRefTable();
+    cancFilter = { from: '', to: '' };
+    refFilter  = { from: '', to: '' };
+    refTypeFilter = 'all';
+
+    document.getElementById('refundFilter')
+        .querySelector('.filter-label').textContent = 'All types';
+
+    ['cancFrom','cancTo','refFrom','refTo']
+        .forEach(id => document.getElementById(id).value = '');
+
+    updateKPIs();
+    buildPie(cancData);
+    renderCancTable();
+    renderRefTable();
 }
 
 function buildPie(rows) {
@@ -151,29 +160,212 @@ function renderCancTable() {
   }).join('');
 }
 
+function formatRemark(text) {
+    if (!text) return '';
+
+    let formatted = text
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase());
+
+    formatted = formatted.replace(/\bRto\b/g, 'RTO');
+
+    return formatted;
+}
+
 function renderRefTable() {
-  const q    = document.getElementById('search1').value.toLowerCase();
-  const rows = refData.filter(r => {
-    if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
-    const d = toYMD(r.dateRefunded);
-    if (refFilter.from && d < refFilter.from) return false;
-    if (refFilter.to   && d > refFilter.to)   return false;
-    return true;
-  });
-  document.getElementById('count1').textContent = `${rows.length} of ${refData.length}`;
-  document.getElementById('refBody').innerHTML = rows.slice(0, 300).map(r => {
-    const badge = r.type.toLowerCase() === 'full'
-      ? `<span class="badge b-full">Full</span>`
-      : `<span class="badge b-partial">Partial</span>`;
-    return `<tr>
-      <td>${r.name}</td>
-      <td>${r.orderId}</td>
-      <td>₹${r.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-      <td>${badge}</td>
-      <td>${r.ccRemark}</td>
-      <td>${r.dateRefunded || '—'}</td>
-    </tr>`;
-  }).join('');
+    const q = document.getElementById('search1').value.toLowerCase();
+
+    const rows = refData.filter(r => {
+
+        // Search filter
+        if (q && !Object.values(r).join(' ').toLowerCase().includes(q)) {
+            return false;
+        }
+
+        // Refund type filter
+        const refundType = (r.type || '').toString().trim().toLowerCase();
+
+        if (refTypeFilter === 'full' && refundType !== 'full') {
+            return false;
+        }
+
+        if (refTypeFilter === 'partial' && refundType !== 'partial') {
+            return false;
+        }
+
+        // CC remark filter
+        const remark = (r.ccRemark || '').trim().toLowerCase();
+
+        if (
+            refRemarkFilter &&
+            remark !== refRemarkFilter
+        ) {
+            return false;
+        }
+
+        // Date filter
+        const d = toYMD(r.dateRefunded);
+
+        if (refFilter.from && d < refFilter.from) {
+            return false;
+        }
+
+        if (refFilter.to && d > refFilter.to) {
+            return false;
+        }
+
+        return true;
+    });
+
+    document.getElementById('count1').textContent =
+        `${rows.length} of ${refData.length}`;
+
+    document.getElementById('refBody').innerHTML = rows.slice(0, 300).map(r => {
+
+        const refundType = (r.type || '').toString().trim().toLowerCase();
+
+        const badge = refundType === 'full'
+            ? `<span class="badge b-full refund-badge"
+                     data-refund-type="full">
+                    Full
+               </span>`
+            : `<span class="badge b-partial refund-badge"
+                     data-refund-type="partial">
+                    Partial
+               </span>`;
+
+        return `
+            <tr>
+                <td>${r.name}</td>
+
+                <td>${r.orderId}</td>
+
+                <td>
+                    ₹${r.amount.toLocaleString('en-IN', {
+                        maximumFractionDigits: 0
+                    })}
+                </td>
+
+                <td>${badge}</td>
+
+                <td>
+                    <span
+                        class="remark-filter"
+                        data-remark="${r.ccRemark || ''}">
+                        ${formatRemark(r.ccRemark)}
+                    </span>
+                </td>
+
+                <td>${r.dateRefunded || '—'}</td>
+            </tr>
+        `;
+
+    }).join('');
+}
+
+document.addEventListener('click', function(event) {
+
+    // Clicked a refund badge
+    const badge = event.target.closest('.refund-badge');
+
+    if (badge) {
+        refTypeFilter = badge.dataset.refundType;
+        renderRefTable();
+        return;
+    }
+
+    // Clicked a CC remark
+    const remark = event.target.closest('.remark-filter');
+
+    if (remark) {
+        refRemarkFilter = remark.dataset.remark
+            .trim()
+            .toLowerCase();
+
+        renderRefTable();
+    }
+
+});
+
+document.addEventListener('click', function(event) {
+
+    const badge = event.target.closest('.refund-badge');
+
+    if (!badge) return;
+
+    refTypeFilter = badge.dataset.refundType;
+
+    renderRefTable();
+});
+
+const refundFilter = document.getElementById('refundFilter');
+const refundFilterBtn = refundFilter.querySelector('.refund-filter-btn');
+const refundFilterLabel = refundFilter.querySelector('.filter-label');
+
+refundFilterBtn.addEventListener('click', function() {
+    refundFilter.classList.toggle('open');
+});
+
+refundFilter.querySelectorAll('.filter-option').forEach(option => {
+
+    option.addEventListener('click', function() {
+
+        refTypeFilter = this.dataset.value;
+
+        refundFilterLabel.textContent = this.textContent.trim();
+
+        refundFilter.classList.remove('open');
+
+        renderRefTable();
+    });
+
+});
+
+document.addEventListener('click', function(event) {
+
+    if (!refundFilter.contains(event.target)) {
+        refundFilter.classList.remove('open');
+    }
+
+});
+document.addEventListener('click', function (event) {
+
+    const badge = event.target.closest('.refund-badge');
+
+    if (!badge) return;
+
+    const type = badge.dataset.refundType;
+
+    if (type === 'full') {
+        refundFilterLabel.textContent = 'Full refund';
+    } 
+    else if (type === 'partial') {
+        refundFilterLabel.textContent = 'Partial refund';
+    }
+
+    refTypeFilter = type;
+
+    renderRefTable();
+});
+
+function populateRemarkFilter() {
+    const select = document.getElementById('remarkFilter');
+
+    const remarks = [...new Set(
+        refData
+            .map(r => (r.ccRemark || '').trim())
+            .filter(Boolean)
+    )].sort();
+
+    select.innerHTML = '<option value="all">All remarks</option>';
+
+    remarks.forEach(remark => {
+        const option = document.createElement('option');
+        option.value = remark;
+        option.textContent = formatRemark(remark);
+        select.appendChild(option);
+    });
 }
 
 function updateKPIs(fc, fr) {
@@ -210,6 +402,7 @@ async function loadAll() {
     ]);
     cancData = cancResp.rows || [];
     refData  = refResp.rows  || [];
+    populateRemarkFilter();
     updateKPIs();
     buildPie(cancData);
     renderCancTable();
