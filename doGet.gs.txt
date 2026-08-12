@@ -1,0 +1,53 @@
+// Map the ?sheet= value the dashboard sends to the spreadsheet that holds
+// it. Add an entry here for every sheet the frontend needs.
+const SPREADSHEET_MAP = {
+  delhivery: '18-6td6ziN3RhcLi5W88yGiVXQbyWzRqi83Eqp8EflJ8'
+};
+
+function doGet(e) {
+  const sheetParam = (e.parameter.sheet || '').toLowerCase();
+  const callback = e.parameter.callback; // present when the frontend loads via JSONP
+
+  const spreadsheetId = SPREADSHEET_MAP[sheetParam];
+  if (!spreadsheetId) {
+    return jsonpResponse({ error: 'Unknown sheet: ' + sheetParam, rows: [] }, callback);
+  }
+
+  // First tab in the spreadsheet (gid=0), regardless of its name.
+  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheets()[0];
+  if (!sheet) {
+    return jsonpResponse({ error: 'No tabs found in spreadsheet: ' + spreadsheetId, rows: [] }, callback);
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(h => toCamelCase(String(h)));
+  const rows = values.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((key, i) => { obj[key] = row[i]; });
+    return obj;
+  });
+
+  return jsonpResponse({ sheet: sheetParam, count: rows.length, rows: rows }, callback);
+}
+
+// "Order ID" -> "orderId", "CC Remark" -> "ccRemark"
+function toCamelCase(header) {
+  return header
+    .trim()
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_, c) => c.toUpperCase())
+    .replace(/^[A-Z]/, c => c.toLowerCase());
+}
+
+// Wraps the JSON as `callback(...)` and serves it as JavaScript when the
+// frontend loads this via a <script> tag (JSONP) instead of fetch() — plain
+// JSON is still returned for direct navigation/testing when no callback is given.
+function jsonpResponse(obj, callback) {
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(obj) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}

@@ -1,0 +1,73 @@
+const SHEET_ID = '1DgMmWKHwhlREaDAa_jQX2qgyY4T_JfnIXgCcL2-1ccY';
+const GID_CANC = '1998798816';
+const GID_GPAY = '717361150';
+
+function doGet(e) {
+  const sheet = e.parameter.sheet || 'cancellations';
+  const callback = e.parameter.callback; // present when the frontend loads via JSONP
+  let data;
+  if (sheet === 'cancellations') {
+    data = getCancellations();
+  } else if (sheet === 'gpay') {
+    data = getGpay();
+  } else {
+    data = { error: 'Unknown sheet' };
+  }
+
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(data) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getCancellations() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheets().find(s => s.getSheetId() == GID_CANC);
+  const rows = sheet.getDataRange().getValues();
+  const headers = ['orderId', 'orderDate', 'cancelDate', 'reason', 'value', 'paymentMode', 'awb', 'nszCity'];
+  const data = [];
+  for (let i = 2; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0]) continue;
+    data.push({
+      orderId:      String(r[0]).replace('#', '').trim(),
+      orderDate:    String(r[1]).trim(),
+      cancelDate:   String(r[2]).trim(),
+      reason:       String(r[3]).trim(),
+      value:        parseFloat(String(r[4]).replace(/[₹,]/g, '')) || 0,
+      paymentMode:  String(r[5]).trim(),
+      awb:          String(r[6]).trim(),
+      nszCity:      String(r[7]).trim()
+    });
+  }
+  return { sheet: 'cancellations', count: data.length, rows: data };
+}
+
+function getGpay() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheets().find(s => s.getSheetId() == GID_GPAY);
+  const rows = sheet.getDataRange().getValues();
+  const data = [];
+  for (let i = 2; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[1]) continue;
+    data.push({
+      date:          String(r[0]).trim(),
+      name:          String(r[1]).trim(),
+      email:         String(r[2]).trim(),
+      orderId:       String(r[3]).trim(),
+      type:          String(r[4]).trim(),
+      phone:         String(r[5]).trim(),
+      amount:        parseFloat(String(r[6]).replace(/[₹,\s]/g, '')) || 0,
+      reason:        String(r[7]).trim(),
+      ccRemark:      String(r[8]).trim(),
+      handledBy:     String(r[9]).trim(),
+      dateRefunded:  String(r[10]).trim()
+    });
+  }
+  return { sheet: 'gpay', count: data.length, rows: data };
+}

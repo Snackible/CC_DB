@@ -34,11 +34,48 @@ function normReason(r) {
   return 'Miscellaneous';
 }
 
-async function fetchSheet(sheet, baseUrl) {
-  const url = baseUrl || APPS_SCRIPT_URL;
-  const res = await fetch(`${url}?sheet=${sheet}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+// Apps Script Web Apps 404 when hit with fetch()/XHR (even same-origin) but
+// work fine via a real navigation or a <script> tag load — so this loads
+// data via JSONP instead of fetch(). Requires doGet to support a `callback`
+// query param and wrap its JSON response as `callback(...)`.
+let jsonpCounter = 0;
+function fetchSheet(sheet, baseUrl) {
+  return new Promise((resolve, reject) => {
+    const url = baseUrl || APPS_SCRIPT_URL;
+    const callbackName = `__jsonp_cb_${jsonpCounter++}_${Date.now()}`;
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      delete window[callbackName];
+      script.remove();
+      clearTimeout(timer);
+    };
+
+    window[callbackName] = (data) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error(`Failed to load sheet "${sheet}"`));
+    };
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error(`Timed out loading sheet "${sheet}"`));
+    }, 15000);
+
+    script.src = `${url}?sheet=${encodeURIComponent(sheet)}&callback=${callbackName}&_=${Date.now()}`;
+    document.head.appendChild(script);
+  });
 }
 
 function getFilteredCanc() {
@@ -660,12 +697,12 @@ async function loadGenericSheets() {
 
 
 
-const NEW_SHEET_LINK = 'https://script.google.com/macros/s/AKfycbwx_OqG7XEt7VrkD_ianlh5Dbl4LASFIfKVKmii6Hlt6Foo2n44jDUoPP-dEPkqYN8/exec'; // paste the Apps Script Web App URL here if this
+const NEW_SHEET_LINK = 'https://script.google.com/macros/s/AKfycbxSuMjhYk1GxoCtkvrttG_VBoaSTHne61kHiO49jYCiz4c43zSdJGsVO8SFEpyL1FPl/exec'; // paste the Apps Script Web App URL here if this
                             
 
 registerSheetTab({
   id: 'Delhivery',                       // TODO: unique short id
-  apiSheet: '',                         // TODO: sheet= value the Apps Script doGet expects
+  apiSheet: 'delhivery',
   apiUrl: NEW_SHEET_LINK || undefined,
   label: 'Delhivery',                   // TODO: tab button text
   searchPlaceholder: 'Search…',
@@ -676,6 +713,11 @@ registerSheetTab({
 async function loadAll() {
   document.getElementById('errorBanner').style.display = 'none';
   document.querySelectorAll('.kpi-value').forEach(el => el.classList.add('loading'));
+
+  // Generic sheets (e.g. Delhivery) load independently of Cancellations/GPay
+  // below — a failure in one tab's source shouldn't block the others.
+  const genericLoad = loadGenericSheets();
+
   try {
     const [cancResp, refResp] = await Promise.all([
       fetchSheet('cancellations'),
@@ -688,7 +730,6 @@ async function loadAll() {
     buildPie(cancData);
     renderCancTable();
     renderRefTable();
-    await loadGenericSheets();
     document.getElementById('lastUpdated').textContent =
       'Updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
@@ -696,6 +737,8 @@ async function loadAll() {
     document.getElementById('errorBanner').style.display = 'block';
     document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('loading'));
   }
+
+  await genericLoad;
 }
 
 loadAll();
