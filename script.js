@@ -38,8 +38,28 @@ function normReason(r) {
 // work fine via a real navigation or a <script> tag load — so this loads
 // data via JSONP instead of fetch(). Requires doGet to support a `callback`
 // query param and wrap its JSON response as `callback(...)`.
+//
+// Google's /exec redirect chain is also just flaky in practice — response
+// times swing from ~3s to 15s+, and it occasionally fails outright with no
+// underlying config problem, but a retry almost always succeeds. So this
+// wraps the single-attempt loader with a few retries before giving up.
 let jsonpCounter = 0;
-function fetchSheet(sheet, baseUrl) {
+
+async function fetchSheet(sheet, baseUrl) {
+  const attempts = 3;
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetchSheetOnce(sheet, baseUrl);
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr;
+}
+
+function fetchSheetOnce(sheet, baseUrl) {
   return new Promise((resolve, reject) => {
     const url = baseUrl || APPS_SCRIPT_URL;
     const callbackName = `__jsonp_cb_${jsonpCounter++}_${Date.now()}`;
@@ -66,12 +86,15 @@ function fetchSheet(sheet, baseUrl) {
       reject(new Error(`Failed to load sheet "${sheet}"`));
     };
 
+    // Apps Script's /exec redirect chain can be genuinely slow (cold starts),
+    // not just failing — 15s was cutting off requests that would've
+    // succeeded a few seconds later, so this gives it more room.
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
       cleanup();
       reject(new Error(`Timed out loading sheet "${sheet}"`));
-    }, 15000);
+    }, 30000);
 
     script.src = `${url}?sheet=${encodeURIComponent(sheet)}&callback=${callbackName}&_=${Date.now()}`;
     document.head.appendChild(script);
@@ -679,7 +702,9 @@ function renderGenericTable(id) {
 }
 
 async function loadGenericSheets() {
-  await Promise.all(registeredSheets.map(async entry => {
+  // Sequential, not Promise.all — simultaneous JSONP requests to the Apps
+  // Script /exec redirect chain are unreliable (see loadAll).
+  for (const entry of registeredSheets) {
     try {
       const resp = await fetchSheet(entry.config.apiSheet, entry.config.apiUrl);
       entry.data = resp.rows || [];
@@ -692,7 +717,7 @@ async function loadGenericSheets() {
     } catch (err) {
       console.error(`Failed to load sheet "${entry.config.id}":`, err);
     }
-  }));
+  }
 }
 
 
@@ -714,15 +739,13 @@ async function loadAll() {
   document.getElementById('errorBanner').style.display = 'none';
   document.querySelectorAll('.kpi-value').forEach(el => el.classList.add('loading'));
 
-  // Generic sheets (e.g. Delhivery) load independently of Cancellations/GPay
-  // below — a failure in one tab's source shouldn't block the others.
-  const genericLoad = loadGenericSheets();
-
   try {
-    const [cancResp, refResp] = await Promise.all([
-      fetchSheet('cancellations'),
-      fetchSheet('gpay')
-    ]);
+    // Everything below is loaded one request at a time, including generic
+    // sheets — simultaneous JSONP requests to Google's /exec redirect chain
+    // are unreliable even across different Apps Script projects, so nothing
+    // here should start until the previous request has fully settled.
+    const cancResp = await fetchSheet('cancellations');
+    const refResp  = await fetchSheet('gpay');
     cancData = cancResp.rows || [];
     refData  = refResp.rows  || [];
     populateRemarkFilter();
@@ -738,7 +761,7 @@ async function loadAll() {
     document.querySelectorAll('.kpi-value').forEach(el => el.classList.remove('loading'));
   }
 
-  await genericLoad;
+  await loadGenericSheets();
 }
 
 loadAll();

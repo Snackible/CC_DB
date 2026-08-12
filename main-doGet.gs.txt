@@ -1,18 +1,17 @@
 const SHEET_ID = '1DgMmWKHwhlREaDAa_jQX2qgyY4T_JfnIXgCcL2-1ccY';
 const GID_CANC = '1998798816';
 const GID_GPAY = '717361150';
+const CACHE_SECONDS = 120; // how long a sheet read is reused before re-reading live
 
 function doGet(e) {
   const sheet = e.parameter.sheet || 'cancellations';
   const callback = e.parameter.callback; // present when the frontend loads via JSONP
-  let data;
-  if (sheet === 'cancellations') {
-    data = getCancellations();
-  } else if (sheet === 'gpay') {
-    data = getGpay();
-  } else {
-    data = { error: 'Unknown sheet' };
-  }
+
+  const data = getCached(sheet, () => {
+    if (sheet === 'cancellations') return getCancellations();
+    if (sheet === 'gpay')          return getGpay();
+    return { error: 'Unknown sheet' };
+  });
 
   if (callback) {
     return ContentService
@@ -70,4 +69,17 @@ function getGpay() {
     });
   }
   return { sheet: 'gpay', count: data.length, rows: data };
+}
+
+// Reuses the last read for CACHE_SECONDS instead of hitting the spreadsheet
+// on every request — Apps Script Web Apps are slow enough under load that
+// this matters a lot for repeat/near-simultaneous requests.
+function getCached(key, compute) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(key);
+  if (cached) return JSON.parse(cached);
+
+  const data = compute();
+  cache.put(key, JSON.stringify(data), CACHE_SECONDS);
+  return data;
 }

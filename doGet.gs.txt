@@ -3,20 +3,26 @@
 const SPREADSHEET_MAP = {
   delhivery: '18-6td6ziN3RhcLi5W88yGiVXQbyWzRqi83Eqp8EflJ8'
 };
+const CACHE_SECONDS = 120; // how long a sheet read is reused before re-reading live
 
 function doGet(e) {
   const sheetParam = (e.parameter.sheet || '').toLowerCase();
   const callback = e.parameter.callback; // present when the frontend loads via JSONP
 
+  const data = getCached(sheetParam, () => readSheet(sheetParam));
+  return jsonpResponse(data, callback);
+}
+
+function readSheet(sheetParam) {
   const spreadsheetId = SPREADSHEET_MAP[sheetParam];
   if (!spreadsheetId) {
-    return jsonpResponse({ error: 'Unknown sheet: ' + sheetParam, rows: [] }, callback);
+    return { error: 'Unknown sheet: ' + sheetParam, rows: [] };
   }
 
   // First tab in the spreadsheet (gid=0), regardless of its name.
   const sheet = SpreadsheetApp.openById(spreadsheetId).getSheets()[0];
   if (!sheet) {
-    return jsonpResponse({ error: 'No tabs found in spreadsheet: ' + spreadsheetId, rows: [] }, callback);
+    return { error: 'No tabs found in spreadsheet: ' + spreadsheetId, rows: [] };
   }
 
   const values = sheet.getDataRange().getValues();
@@ -27,7 +33,20 @@ function doGet(e) {
     return obj;
   });
 
-  return jsonpResponse({ sheet: sheetParam, count: rows.length, rows: rows }, callback);
+  return { sheet: sheetParam, count: rows.length, rows: rows };
+}
+
+// Reuses the last read for CACHE_SECONDS instead of hitting the spreadsheet
+// on every request — Apps Script Web Apps are slow enough under load that
+// this matters a lot for repeat/near-simultaneous requests.
+function getCached(key, compute) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(key);
+  if (cached) return JSON.parse(cached);
+
+  const data = compute();
+  cache.put(key, JSON.stringify(data), CACHE_SECONDS);
+  return data;
 }
 
 // "Order ID" -> "orderId", "CC Remark" -> "ccRemark"
