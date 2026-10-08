@@ -1,9 +1,12 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyEo76blPXUgGCH_kZ_qbPB5GPN0PBhMcp-_D9TG4R9zn_ICY9TtAExkI62R5a7Qwggyw/exec';
 
+// Pie-chart categorical palette, derived from the dashboard's Flat Color
+// Set 6 brand palette (hot pink, cyan, deep purple, magenta) plus tints
+// so adjacent slices stay distinguishable when there are many reasons.
 const COLORS = [
-  '#2a78d6','#008300','#e87ba4','#eda100',
-  '#1baf7a','#eb6834','#4a3aa7','#e34948',
-  '#06b6d4','#8b5cf6'
+  '#f02e7a','#6ec9d8','#4d1d4a','#8e2566',
+  '#f799bc','#a8dde7','#7a3f75','#c063a0',
+  '#2a1a2e','#45a4b4'
 ];
 
 let cancData = [];

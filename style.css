@@ -1,12 +1,18 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f5f4f0;
+  /* Flat Color Set 6 palette
+     #D9D9D9 light gray · #6EC9D8 cyan · #F02E7A hot pink
+     #8E2566 magenta    · #4D1D4A deep purple */
+  --bg: #f0eef2;
   --surface: #ffffff;
-  --border: rgba(0,0,0,0.09);
-  --text: #0b0b0b;
-  --muted: #6b6b68;
-  --accent: #2a78d6;
+  --border: rgba(77, 29, 74, 0.12);
+  --text: #1a0f1e;
+  --muted: #7a7085;
+  --accent: #f02e7a;
+  --accent-soft: #6ec9d8;
+  --brand-deep: #4d1d4a;
+  --brand-mid: #8e2566;
   --radius: 10px;
   --header-h: 56px;
   --kpi-h: 72px;
@@ -136,7 +142,7 @@ body {
   transition: color 0.15s;
 }
 .tab:hover { color: var(--text); }
-.tab.active { color: var(--text); border-bottom-color: var(--text); }
+.tab.active { color: var(--brand-deep); border-bottom-color: var(--accent); }
 
 .pane { display: none; flex-direction: column; flex: 1; overflow: hidden; }
 .pane.active { display: flex; }
@@ -214,10 +220,10 @@ tr:hover td { background: var(--bg); }
   font-size: 11px;
   font-weight: 500;
 }
-.b-cod { background: #fef3c7; color: #92400e; }
-.b-pre { background: #dbeafe; color: #1e40af; }
-.b-full { background: #fee2e2; color: #991b1b; }
-.b-partial { background: #f7f978; color: #ffa705; }
+.b-cod { background: #dff2f6; color: #1f6e7b; }
+.b-pre { background: #fcdcea; color: #8e2566; }
+.b-full { background: #ead6e7; color: #4d1d4a; }
+.b-partial { background: #fde0ec; color: #c7408a; }
 
 /* ── CUSTOMISE PANE ── */
 .customise-pane {
@@ -339,9 +345,9 @@ tr:hover td { background: var(--bg); }
   transition: background-color 0.15s, color 0.15s;
 }
 
-#typeFilter1.full { background: #fee2e2; color: #991b1b; }
+#typeFilter1.full { background: #ead6e7; color: #4d1d4a; }
 
-#typeFilter1.partial { background: #f7f978; color: #ffa705; }
+#typeFilter1.partial { background: #fde0ec; color: #c7408a; }
 
 .refund-filter {
     position: relative;
@@ -410,18 +416,18 @@ tr:hover td { background: var(--bg); }
 }
 
 .filter-option.option-full {
-    background: #fee2e2;
-    color: #991b1b;
+    background: #ead6e7;
+    color: #4d1d4a;
 }
 
-.filter-option.option-partial{ background: #f7f978; color: #ffa705; }
+.filter-option.option-partial{ background: #fde0ec; color: #c7408a; }
 
 .filter-option.option-full:hover {
-    background: #fecaca;
+    background: #dcc1d7;
 }
 
 .filter-option.option-partial:hover {
-    background: #bbf7d0;
+    background: #fac6dc;
 }
 
 /* Clickable refund badges */
