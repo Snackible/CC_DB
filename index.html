@@ -15,6 +15,31 @@
     </div>
     <div class="header-right">
       <span id="lastUpdated" class="last-updated"></span>
+      <div class="customise-wrap" id="customiseWrap">
+        <button class="btn-refresh" id="customiseBtn" type="button">⚙ Customise</button>
+        <div class="customise-popover" id="customisePopover">
+          <div class="customise-pane">
+            <div class="customise-group">
+              <div class="customise-label">Cancellations — filter by cancel date</div>
+              <div class="customise-row">
+                <label>From <input type="date" id="cancFrom" /></label>
+                <label>To <input type="date" id="cancTo" /></label>
+              </div>
+            </div>
+            <div class="customise-group">
+              <div class="customise-label">GPay refunds — filter by date refunded</div>
+              <div class="customise-row">
+                <label>From <input type="date" id="refFrom" /></label>
+                <label>To <input type="date" id="refTo" /></label>
+              </div>
+            </div>
+            <div class="customise-actions">
+              <button class="btn-apply" onclick="applyCustomise()">Apply</button>
+              <button class="btn-reset" onclick="resetCustomise()">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
     </div>
   </header>
@@ -61,7 +86,6 @@
     <div class="tabs">
       <button class="tab active" onclick="switchTab(0, this)">Cancellations</button>
       <button class="tab" onclick="switchTab(1, this)">GPay COD refunds</button>
-      <button class="tab" onclick="switchTab(2, this)">Customise</button>
     </div>
 
     <!-- Cancellations table -->
@@ -148,29 +172,6 @@
       </div>
     </div>
 
-    <!-- Customise pane -->
-    <div class="pane" id="pane2">
-      <div class="customise-pane">
-        <div class="customise-group">
-          <div class="customise-label">Cancellations — filter by cancel date</div>
-          <div class="customise-row">
-            <label>From <input type="date" id="cancFrom" /></label>
-            <label>To <input type="date" id="cancTo" /></label>
-          </div>
-        </div>
-        <div class="customise-group">
-          <div class="customise-label">GPay refunds — filter by date refunded</div>
-          <div class="customise-row">
-            <label>From <input type="date" id="refFrom" /></label>
-            <label>To <input type="date" id="refTo" /></label>
-          </div>
-        </div>
-        <div class="customise-actions">
-          <button class="btn-apply" onclick="applyCustomise()">Apply</button>
-          <button class="btn-reset" onclick="resetCustomise()">Reset</button>
-        </div>
-      </div>
-    </div>
   </section>
 
   <!-- error banner -->

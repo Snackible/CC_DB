@@ -59,6 +59,8 @@ export default function Dashboard() {
   );
 
   const refundDropdownRef = useRef(null);
+  const customiseRef = useRef(null);
+  const [customiseOpen, setCustomiseOpen] = useState(false);
 
   const loadAll = useCallback(async () => {
     setErrorMsg('');
@@ -104,11 +106,14 @@ export default function Dashboard() {
     loadAll();
   }, [loadAll]);
 
-  // Close refund dropdown on outside click.
+  // Close refund dropdown + customise popover on outside click.
   useEffect(() => {
     const onDocClick = (e) => {
       if (refundDropdownRef.current && !refundDropdownRef.current.contains(e.target)) {
         setRefundDropdownOpen(false);
+      }
+      if (customiseRef.current && !customiseRef.current.contains(e.target)) {
+        setCustomiseOpen(false);
       }
     };
     document.addEventListener('click', onDocClick);
@@ -189,6 +194,7 @@ export default function Dashboard() {
         return { ...entry, dateFilter: { from: d.from || '', to: d.to || '' } };
       }),
     );
+    setCustomiseOpen(false);
   };
 
   const resetCustomise = () => {
@@ -226,6 +232,46 @@ export default function Dashboard() {
         </div>
         <div className="header-right">
           <span className="last-updated">{lastUpdated}</span>
+          <div className={`customise-wrap${customiseOpen ? ' open' : ''}`} ref={customiseRef}>
+            <button
+              className="btn-refresh"
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCustomiseOpen((o) => !o); }}
+            >
+              ⚙ Customise
+            </button>
+            <div className="customise-popover">
+              <div className="customise-pane">
+                <div className="customise-group">
+                  <div className="customise-label">Cancellations — filter by cancel date</div>
+                  <div className="customise-row">
+                    <label>From <input type="date" value={draft.cancFrom} onChange={(e) => setDraft((d) => ({ ...d, cancFrom: e.target.value }))} /></label>
+                    <label>To <input type="date" value={draft.cancTo} onChange={(e) => setDraft((d) => ({ ...d, cancTo: e.target.value }))} /></label>
+                  </div>
+                </div>
+                <div className="customise-group">
+                  <div className="customise-label">GPay refunds — filter by date refunded</div>
+                  <div className="customise-row">
+                    <label>From <input type="date" value={draft.refFrom} onChange={(e) => setDraft((d) => ({ ...d, refFrom: e.target.value }))} /></label>
+                    <label>To <input type="date" value={draft.refTo} onChange={(e) => setDraft((d) => ({ ...d, refTo: e.target.value }))} /></label>
+                  </div>
+                </div>
+                {GENERIC_SHEETS.filter((c) => c.dateField).map((cfg) => (
+                  <div key={cfg.id} className="customise-group">
+                    <div className="customise-label">{cfg.label} — filter by date</div>
+                    <div className="customise-row">
+                      <label>From <input type="date" value={draft.generic[cfg.id]?.from || ''} onChange={(e) => setDraft((d) => ({ ...d, generic: { ...d.generic, [cfg.id]: { ...(d.generic[cfg.id] || {}), from: e.target.value } } }))} /></label>
+                      <label>To <input type="date" value={draft.generic[cfg.id]?.to || ''} onChange={(e) => setDraft((d) => ({ ...d, generic: { ...d.generic, [cfg.id]: { ...(d.generic[cfg.id] || {}), to: e.target.value } } }))} /></label>
+                    </div>
+                  </div>
+                ))}
+                <div className="customise-actions">
+                  <button className="btn-apply" onClick={applyCustomise}>Apply</button>
+                  <button className="btn-reset" onClick={resetCustomise}>Reset</button>
+                </div>
+              </div>
+            </div>
+          </div>
           <button className="btn-refresh" onClick={loadAll} disabled={isLoading}>↻ Refresh</button>
         </div>
       </header>
@@ -248,12 +294,11 @@ export default function Dashboard() {
         <div className="tabs">
           <button className={`tab ${activeTab === 0 ? 'active' : ''}`} onClick={() => setActiveTab(0)}>Cancellations</button>
           <button className={`tab ${activeTab === 1 ? 'active' : ''}`} onClick={() => setActiveTab(1)}>GPay COD refunds</button>
-          <button className={`tab ${activeTab === 2 ? 'active' : ''}`} onClick={() => setActiveTab(2)}>Customise</button>
           {GENERIC_SHEETS.map((cfg, i) => (
             <button
               key={cfg.id}
-              className={`tab ${activeTab === 3 + i ? 'active' : ''}`}
-              onClick={() => setActiveTab(3 + i)}
+              className={`tab ${activeTab === 2 + i ? 'active' : ''}`}
+              onClick={() => setActiveTab(2 + i)}
             >
               {cfg.label}
             </button>
@@ -414,68 +459,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === 2 && (
-          <div className="pane active">
-            <div className="customise-pane">
-              <div className="customise-group">
-                <div className="customise-label">Cancellations — filter by cancel date</div>
-                <div className="customise-row">
-                  <label>From <input type="date" value={draft.cancFrom} onChange={(e) => setDraft((d) => ({ ...d, cancFrom: e.target.value }))} /></label>
-                  <label>To <input type="date" value={draft.cancTo} onChange={(e) => setDraft((d) => ({ ...d, cancTo: e.target.value }))} /></label>
-                </div>
-              </div>
-              <div className="customise-group">
-                <div className="customise-label">GPay refunds — filter by date refunded</div>
-                <div className="customise-row">
-                  <label>From <input type="date" value={draft.refFrom} onChange={(e) => setDraft((d) => ({ ...d, refFrom: e.target.value }))} /></label>
-                  <label>To <input type="date" value={draft.refTo} onChange={(e) => setDraft((d) => ({ ...d, refTo: e.target.value }))} /></label>
-                </div>
-              </div>
-
-              {GENERIC_SHEETS.filter((c) => c.dateField).map((cfg) => (
-                <div key={cfg.id} className="customise-group">
-                  <div className="customise-label">{cfg.label} — filter by date</div>
-                  <div className="customise-row">
-                    <label>
-                      From{' '}
-                      <input
-                        type="date"
-                        value={draft.generic[cfg.id]?.from || ''}
-                        onChange={(e) =>
-                          setDraft((d) => ({
-                            ...d,
-                            generic: { ...d.generic, [cfg.id]: { ...(d.generic[cfg.id] || {}), from: e.target.value } },
-                          }))
-                        }
-                      />
-                    </label>
-                    <label>
-                      To{' '}
-                      <input
-                        type="date"
-                        value={draft.generic[cfg.id]?.to || ''}
-                        onChange={(e) =>
-                          setDraft((d) => ({
-                            ...d,
-                            generic: { ...d.generic, [cfg.id]: { ...(d.generic[cfg.id] || {}), to: e.target.value } },
-                          }))
-                        }
-                      />
-                    </label>
-                  </div>
-                </div>
-              ))}
-
-              <div className="customise-actions">
-                <button className="btn-apply" onClick={applyCustomise}>Apply</button>
-                <button className="btn-reset" onClick={resetCustomise}>Reset</button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {GENERIC_SHEETS.map((cfg, i) =>
-          activeTab === 3 + i ? (
+          activeTab === 2 + i ? (
             <GenericSheetTab
               key={cfg.id}
               entry={genericState[i]}

@@ -143,6 +143,10 @@ function applyCustomise() {
     }
     renderGenericTable(entry.config.id);
   });
+
+  // Collapse the popover once filters are applied.
+  const wrap = document.getElementById('customiseWrap');
+  if (wrap) wrap.classList.remove('open');
 }
 
 function resetCustomise() {
@@ -415,6 +419,19 @@ document.addEventListener('click', function(event) {
     }
 
 });
+
+// Customise popover — toggle on button click, close on outside click.
+const customiseWrap = document.getElementById('customiseWrap');
+const customiseBtn  = document.getElementById('customiseBtn');
+if (customiseBtn && customiseWrap) {
+  customiseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    customiseWrap.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!customiseWrap.contains(e.target)) customiseWrap.classList.remove('open');
+  });
+}
 document.addEventListener('click', function (event) {
 
     const badge = event.target.closest('.refund-badge');
