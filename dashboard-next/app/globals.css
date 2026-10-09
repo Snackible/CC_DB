@@ -4,8 +4,9 @@
   /* Flat Color Set 6 palette
      #D9D9D9 light gray · #6EC9D8 cyan · #F02E7A hot pink
      #8E2566 magenta    · #4D1D4A deep purple */
-  --bg: #f0eef2;
+  --bg: #ffffff;
   --surface: #ffffff;
+  --surface-alt: #f7f5f8;
   --border: rgba(77, 29, 74, 0.12);
   --text: #1a0f1e;
   --muted: #7a7085;
@@ -165,7 +166,7 @@ body {
   padding: 0 10px;
   font-size: 12px;
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface-alt);
   outline: none;
 }
 .table-toolbar input:focus { border-color: var(--accent); }
@@ -177,7 +178,7 @@ body {
   padding: 0 8px;
   font-size: 12px;
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface-alt);
   outline: none;
   cursor: pointer;
 }
@@ -210,7 +211,7 @@ td {
   text-overflow: ellipsis;
 }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--bg); }
+tr:hover td { background: var(--surface-alt); }
 
 /* ── BADGES ── */
 .badge {
@@ -265,7 +266,7 @@ tr:hover td { background: var(--bg); }
   padding: 0 10px;
   font-size: 12px;
   color: var(--text);
-  background: var(--bg);
+  background: var(--surface-alt);
   outline: none;
   cursor: pointer;
 }
@@ -337,7 +338,7 @@ tr:hover td { background: var(--bg); }
     font-size: 11px;
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
-    background: var(--bg);
+    background: var(--surface-alt);
     color: var(--text);
 }
 
@@ -362,7 +363,7 @@ tr:hover td { background: var(--bg); }
     padding: 0 10px;
     font-size: 12px;
     color: var(--text);
-    background: var(--bg);
+    background: var(--surface-alt);
     cursor: pointer;
 
     display: flex;
@@ -412,7 +413,7 @@ tr:hover td { background: var(--bg); }
 }
 
 .filter-option:hover {
-    background: var(--bg);
+    background: var(--surface-alt);
 }
 
 .filter-option.option-full {
